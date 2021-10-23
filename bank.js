@@ -16,7 +16,7 @@
 Промисы использовать для работы с API в целях отправки запросов на сервер.
 
 Создать отдельный git-репозиторий для этого проекта и дальше работать с этим проектом в этом репозитории.
-
+debit
 */
 
 let baseClients = [
@@ -24,8 +24,9 @@ let baseClients = [
         name: "John",
         surname: "Conor",
         isActive: true,
-        departmentNumber: 0,
-        position: 1,
+        registration: 0,
+        
+        decardposition: 1,
         salary: 200,
         isFired: false, 
     },    
