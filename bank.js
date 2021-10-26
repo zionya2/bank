@@ -107,7 +107,6 @@ class Bank {
                 }
             }
             result[type] = Math.floor((result["UAH"] / data[type.toUpperCase()] + result[type.toUpperCase()]) * 100) / 100;
-            console.log({"debtor": result["debtor"], [type]: result[type],})
             return {"debtor": result["debtor"], [type]: result[type],};
         });
         
