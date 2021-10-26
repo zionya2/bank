@@ -1,42 +1,119 @@
-/*
-Клиенты банка, имеют такие характеристики - фио, активный или нет, дата регистрации в банке, счета.
-Существует два типа счетов: дебетовый и кредитовый.
 
-Дебитовый счет имеет текущий баланс либо он положителен либо нулевой.
-Кредитовый счет имеет два баланса: личные средства, кредитные средства и кредитный лимит.
-У каждого счета есть активность, дата активности когда заканчивается срок годности пластиковой карты.
-У каждого счета есть тип валюты, UAH, RUB, USD, GBP, EUR и другие.
+class Bank {
+    #clients;
 
-Подсчитать общее количество денег внутри банка в долларовом эквиваленте учитывая кредитные лимиты и снятие средств.
-Посчитать сколько всего денег в долларовом эквиваленте все клиенты должны банку.
-Посчитать сколько неактивных клиентов должны погасить кредит банку и на какую общую сумму.
-Аналогично для активных.
+    constructor (clients){
+        this.#clients = clients;
+    }
 
-Для получения актуальных курсов валют использовать API (которое будет предоставлено).
-Промисы использовать для работы с API в целях отправки запросов на сервер.
+    async getCurrencyRates(){
+        let url = "https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5";
+        let json;
+        let response = await fetch(url);
+        let result = {};
 
-Создать отдельный git-репозиторий для этого проекта и дальше работать с этим проектом в этом репозитории.
-debit
-*/
-/*
-accounts
-Debit account
-Credit account 
-current balance
-type
-expiration date
+        if (response.ok) {
+            json = await response.json();
+        }
 
-Jacob
-William
-Ethan
-Michael
+        for (let i = 0; i < json.length; i++){
+            result[json[i]["ccy"]] = Number(json[i]["sale"]);
+        }
 
-A debit account has a current balance that is either positive or zero.
-A credit account has two balances: personal funds, credit funds and credit limit. 
+        return result;
+    }
 
-Each account has an activity, the date of activity when the expiration date of the plastic card expires.
-Each account has a currency type, UAH, RUB, USD, GBP, EUR and others.
-*/
+    countTotalMoney(type) {
+        let rates = this.getCurrencyRates();
+        rates.then(data => {
+            let totalMoney = {};        
+
+            for (let i = 0; i < this.#clients.length; i++) {
+
+                if (totalMoney[this.#clients[i].debitAccount.type] === undefined || totalMoney[this.#clients[i].creditAccaunt.type] === undefined) {
+                    totalMoney[this.#clients[i].debitAccount.type] = 0;
+                    totalMoney[this.#clients[i].creditAccaunt.type] = 0;
+                };
+                totalMoney[this.#clients[i].debitAccount.type] += this.#clients[i].debitAccount.balance;
+                totalMoney[this.#clients[i].creditAccaunt.type] += (this.#clients[i].creditAccaunt.balance - this.#clients[i].creditAccaunt.creditLimit);
+            }
+
+            for (let elem in totalMoney) {
+                
+                if (elem !== type.toUpperCase()) {
+                    if (elem !== "UAH") {
+                        console.log("rates[elem]", data["USD"], elem)
+                        totalMoney["UAH"] += totalMoney[elem] * data[elem];
+                    }
+                }
+            }
+            
+            return Math.floor((totalMoney["UAH"] / data[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
+        });
+    }
+
+    countOweMoneyAllClients(type) {
+        let rates = this.getCurrencyRates();
+
+        rates.then(data => {
+            let totalMoney = {};
+
+            for (let i = 0; i < this.#clients.length; i++) {
+
+                if (totalMoney[this.#clients[i].creditAccaunt.type] === undefined) {
+                    totalMoney[this.#clients[i].creditAccaunt.type] = 0;
+                }
+                totalMoney[this.#clients[i].creditAccaunt.type] += (this.#clients[i].creditAccaunt.creditLimit - this.#clients[i].creditAccaunt.balance);
+            }
+            
+            for (let elem in totalMoney) {
+                if (elem !== type.toUpperCase()) {
+                    if (elem !== "UAH") {
+                        totalMoney["UAH"] += totalMoney[elem] * data[elem];
+                    }
+                }
+            }
+            return Math.floor((totalMoney["UAH"] / data[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
+        });
+        
+    }
+
+    countDebtorsTotalDebt(isActive, type){
+        let rates = this.getCurrencyRates();
+
+        rates.then(data => {
+            let result = { debtor: 0,};
+
+            for (let i = 0; i < this.#clients.length; i++) {
+
+                if (this.#clients[i].isActive === isActive) {
+                    
+                    if (this.#clients[i].creditAccaunt.creditLimit !== this.#clients[i].creditAccaunt.balance){
+                        result.debtor++;
+                        
+                        if (result[this.#clients[i].creditAccaunt.type] === undefined) {
+                            result[this.#clients[i].creditAccaunt.type] = 0;
+                        };
+                        result[this.#clients[i].creditAccaunt.type] += (this.#clients[i].creditAccaunt.creditLimit - this.#clients[i].creditAccaunt.balance);
+                    }    
+                }
+            }
+            
+            for (let elem in result) {
+                if (elem !== type.toUpperCase()) {
+                    if (elem !== "UAH" && elem !== "debtor") {
+                        result["UAH"] += result[elem] * data[elem];
+                    }
+                }
+            }
+            result[type] = Math.floor((result["UAH"] / data[type.toUpperCase()] + result[type.toUpperCase()]) * 100) / 100;
+            console.log({"debtor": result["debtor"], [type]: result[type],})
+            return {"debtor": result["debtor"], [type]: result[type],};
+        });
+        
+    } 
+
+}
 
 let baseClients = [
     {
@@ -125,125 +202,14 @@ let baseClients = [
     },
 ];
 
-class Bank {
-    #clients;
-
-    constructor (clients){
-        this.#clients = clients;
-    }
-
-    /*async getCurrencyRates(){
-        let url = "https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5";
-        let json;
-        let response = await fetch(url);
-        let result = {};
-
-        if (response.ok) {
-            json = await response.json();
-        }
-
-        for (let i = 0; i < json.length; i++){
-            result[json[i]["ccy"]] = Number(json[i]["sale"]);
-        }
-
-        return result;
-    }*/
-
-    getCurrencyRates(){
-        let url = "https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5";
-        //let json;
-        //let response = await fetch(url);
-        //let result = {};
-
-        let result = fetch(url)
-            .then((result) => result.json())
-            .then((obj) => {
-                    let result = {};
-                    for (let i = 0; i < obj.length; i++){
-                        result[obj[i]["ccy"]] = Number(obj[i]["sale"]);
-                    }
-                    return result;
-                }
-            );
-        return result;
-    }
-
-    countTotalMoneyInsideBank(type) {
-        let rates = this.getCurrencyRates();
-        //rates
-        console.log(rates.USD, "rates", rates, rates["USD"]);
-        let totalMoney = {};        
-
-        for (let i = 0; i < this.#clients.length; i++) {
-
-            if (totalMoney[this.#clients[i].debitAccount.type] === undefined || totalMoney[this.#clients[i].creditAccaunt.type] === undefined) {
-                totalMoney[this.#clients[i].debitAccount.type] = 0;
-                totalMoney[this.#clients[i].creditAccaunt.type] = 0;
-            };
-            totalMoney[this.#clients[i].debitAccount.type] += this.#clients[i].debitAccount.balance;
-            totalMoney[this.#clients[i].creditAccaunt.type] += (this.#clients[i].creditAccaunt.balance - this.#clients[i].creditAccaunt.creditLimit);
-        }
-        console.log("totalManey", totalMoney)        
-        for (let elem in totalMoney) {
-            if (elem !== type.toUpperCase()) {
-                if (elem !== "UAH") {
-                    console.log("rates[elem]", rates["USD"], elem)
-                    totalMoney["UAH"] += totalMoney[elem] * rates[elem];
-                }
-            }
-        }
-        
-        console.log("totalManeypo", totalMoney);
-
-        return Math.floor((totalMoney["UAH"] / rates[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
-    }
-
-    async countOweMoneyAllClients(type) {
-        let rates = await this.getCurrencyRates();
-        let totalMoney = {};
-
-        for (let i = 0; i < this.#clients.length; i++) {
-
-            if (totalMoney[this.#clients[i].creditAccaunt.type] === undefined) {
-                totalMoney[this.#clients[i].creditAccaunt.type] = 0;
-            }
-            totalMoney[this.#clients[i].creditAccaunt.type] += (this.#clients[i].creditAccaunt.creditLimit - this.#clients[i].creditAccaunt.balance);
-        }
-        
-        for (let elem in totalMoney) {
-            if (elem !== type.toUpperCase()) {
-                if (elem !== "UAH") {
-                    totalMoney["UAH"] += totalMoney[elem] * rates[elem];
-                }
-            }
-        }
-        return Math.floor((totalMoney["UAH"] / rates[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
-    }
-
-    countDebtorsTotalDebt(isActive){
-        let result = { debtor: 0,};
-
-        for (let i = 0; i < this.#clients.length; i++) {
-
-            if (this.#clients[i].isActive === isActive) {
-                
-                if (this.#clients[i].creditAccaunt.creditLimit !== this.#clients[i].creditAccaunt.balance){
-                    result.debtor++;
-                    
-                    if (result[this.#clients[i].creditAccaunt.type] === undefined) {
-                        result[this.#clients[i].creditAccaunt.type] = 0;
-                    };
-                    result[this.#clients[i].creditAccaunt.type] += (this.#clients[i].creditAccaunt.creditLimit - this.#clients[i].creditAccaunt.balance);
-                }    
-            }
-        }
-        return result;
-    } 
-
-}
-
 let bank = new Bank(baseClients);
 
-console.log("rt", bank.countTotalMoneyInsideBank("EUR"));
+/*let bankIb = bank.getCurrencyRates()
+
+bankIb.then(data => {
+    console.log(data.EUR)
+})*/
+
+//console.log(typeof bank.countTotalMoney("EUR"));
 //console.log("rt", bank.countOweMoneyAllClients("USD"));
-//console.log("rt", bank.countDebtorsTotalDebt(true));
+//console.log("rt", bank.countDebtorsTotalDebt(true, "usd"));
