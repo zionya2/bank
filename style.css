@@ -44,6 +44,14 @@
         color: #3c763d;
         background-color: #dff0d8;
     }
+    .accounts {
+        padding: 5px;
+        background-color: #73866c23; 
+    }
+    .accountClient {
+        border-top: 1px solid #2e441b67;
+    }
+    
     .cardTitle {
         margin: 0;
         font-size: 20px;

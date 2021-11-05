@@ -24,119 +24,116 @@ class Bank {
 
         return result;
     }
+
     get getClients() {
         return this.#clients;
     }
-    calcTotalMoney(type) {
-        let rates = this.getCurrencyRates();
+    
+    async calcTotalMoney(type) {
+        let rates = await this.getCurrencyRates();
+        let totalMoney = {};        
 
-        rates.then(data => {
-            let totalMoney = {};        
+        for (let i = 0; i < this.#clients.length; i++) {
 
-            for (let i = 0; i < this.#clients.length; i++) {
+            for (let j = 0; j < this.#clients[i].accounts.length; j++) {
+                let clientAccount = this.#clients[i].accounts[j];
 
-                for (let j = 0; j < this.#clients[i].accounts.length; j++) {
-                    let clientAccount = this.#clients[i].accounts[j];
+                if (totalMoney[clientAccount.currency] === undefined) {
+                    totalMoney[clientAccount.currency] = 0;
+                }
+                if (clientAccount.creditLimit) {
+                    totalMoney[clientAccount.currency] += (clientAccount.balance - clientAccount.creditLimit);
+                } else {
+                    totalMoney[clientAccount.currency] += clientAccount.balance;
+                }
+            }
+        }
 
+        for (let elem in totalMoney) {
+            
+            if (elem !== type.toUpperCase()) {
+                if (elem !== "UAH") {
+                    totalMoney["UAH"] += totalMoney[elem] * rates[elem];
+                }
+            }
+        }
+        if(type.toUpperCase() === "UAH") {
+            return totalMoney["UAH"];
+        }
+        return Math.floor((totalMoney["UAH"] / rates[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
+    }
+
+    async calcOweMoneyClients(type, isActive) {
+        let rates = await this.getCurrencyRates();
+        let totalMoney = {};
+
+        for (let i = 0; i < this.#clients.length; i++) {
+
+            for (let j = 0; j < this.#clients[i].accounts.length; j++) {
+                let clientAccount = this.#clients[i].accounts[j];
+
+                if (clientAccount.creditLimit && (clientAccount.creditLimit > clientAccount.balance)) {
                     if (totalMoney[clientAccount.currency] === undefined) {
                         totalMoney[clientAccount.currency] = 0;
                     }
-                    if (clientAccount.creditLimit) {
-                        totalMoney[clientAccount.currency] += (clientAccount.balance - clientAccount.creditLimit);
-                    } else {
-                        totalMoney[clientAccount.currency] += clientAccount.balance;
+                    if (isActive === undefined) {
+                        totalMoney[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance); 
+                    }
+                    if (this.#clients[i].isActive === isActive) {
+                        totalMoney[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance); 
                     }
                 }
             }
-
-            for (let elem in totalMoney) {
-                
-                if (elem !== type.toUpperCase()) {
-                    if (elem !== "UAH") {
-                        totalMoney["UAH"] += totalMoney[elem] * data[elem];
-                    }
+        }
+        for (let elem in totalMoney) {
+            if (elem !== type.toUpperCase()) {
+                if (elem !== "UAH") {
+                    totalMoney["UAH"] += totalMoney[elem] * rates[elem];
                 }
             }
-            if(type.toUpperCase() === "UAH") {
-                return totalMoney["UAH"];
-            }
-            return Math.floor((totalMoney["UAH"] / data[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
-        });
+        }
+        if (type.toUpperCase() === "UAH") {
+            return totalMoney["UAH"];
+        }
+        return Math.floor((totalMoney["UAH"] / rates[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
     }
 
-    calcOweMoneyClients(type, isActive) {
-        let rates = this.getCurrencyRates();
+    async countDebtorsTotalDebt(type, isActive){
+        let rates = await this.getCurrencyRates();
+        let result = { debtor: 0,};
 
-        rates.then(data => {
-            let totalMoney = {};
-
-            for (let i = 0; i < this.#clients.length; i++) {
+        for (let i = 0; i < this.#clients.length; i++) {
+            if (this.#clients[i].isActive === isActive) {
 
                 for (let j = 0; j < this.#clients[i].accounts.length; j++) {
                     let clientAccount = this.#clients[i].accounts[j];
 
-                    if (clientAccount.creditLimit && (clientAccount.creditLimit > clientAccount.balance)) {
-                        if (totalMoney[clientAccount.currency] === undefined) {
-                            totalMoney[clientAccount.currency] = 0;
-                        }
-                        if (isActive === undefined) {
-                            totalMoney[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance); 
-                        }
-                        if (this.#clients[i].isActive === isActive) {
-                            totalMoney[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance); 
-                        }
+                    if (result[clientAccount.currency] === undefined) {
+                            result[clientAccount.currency] = 0;
+                    }
+                    if (clientAccount.creditLimit && (clientAccount.creditLimit > clientAccount.balance)){
+                        result.debtor++;
+                        result[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance);
                     }
                 }
             }
-            for (let elem in totalMoney) {
-                if (elem !== type.toUpperCase()) {
-                    if (elem !== "UAH") {
-                        totalMoney["UAH"] += totalMoney[elem] * data[elem];
+        }
+        for (let elem in result) {
+            
+            if (elem !== type.toUpperCase()) {
+                if (elem !== "UAH" && elem !== "debtor") {
+
+                    if (result["UAH"] === undefined) {
+                        result["UAH"] = 0;
                     }
+                    result["UAH"] += result[elem] * rates[elem];
                 }
             }
-            if (type.toUpperCase() === "UAH") {
-                return totalMoney["UAH"];
-            }
-            return Math.floor((totalMoney["UAH"] / data[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
-        });
-    }
-
-    countDebtorsTotalDebt(type, isActive){
-        let rates = this.getCurrencyRates();
-
-        rates.then(data => {
-            let result = { debtor: 0,};
-
-            for (let i = 0; i < this.#clients.length; i++) {
-                if (this.#clients[i].isActive === isActive) {
-
-                    for (let j = 0; j < this.#clients[i].accounts.length; j++) {
-                        let clientAccount = this.#clients[i].accounts[j];
-
-                        if (clientAccount.creditLimit && (clientAccount.creditLimit > clientAccount.balance)){
-                            result.debtor++;
-
-                            if (result[clientAccount.currency] === undefined) {
-                                result[clientAccount.currency] = 0;
-                            }
-                            result[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance);
-                        }
-                    }
-                }
-            }
-            for (let elem in result) {
-                if (elem !== type.toUpperCase()) {
-                    if (elem !== "UAH" && elem !== "debtor") {
-                        result["UAH"] += result[elem] * data[elem];
-                    }
-                }
-            }
-            if (type.toUpperCase() !== "UAH") {
-               result[type.toUpperCase()] = Math.floor((result["UAH"] / data[type.toUpperCase()] + result[type.toUpperCase()]) * 100) / 100;
-            }
-            return {"debtor": result["debtor"], [type.toUpperCase()]: result[type.toUpperCase()],};
-        });
+        }
+        if (type.toUpperCase() !== "UAH") {
+            result[type.toUpperCase()] = Math.floor((result["UAH"] / rates[type.toUpperCase()] + result[type.toUpperCase()]) * 100) / 100;
+        }
+        return {"debtor": result["debtor"], [type.toUpperCase()]: result[type.toUpperCase()],};
     } 
 }
 
@@ -144,7 +141,7 @@ class RenderHtml extends Bank {
     #app;
 
     constructor(clients, selector) {
-        super(clients || []);
+        super(clients);
         this.#app = document.querySelector(selector);
         
         if(this.#app === null) {
@@ -204,12 +201,14 @@ class RenderHtml extends Bank {
             this.statistics();
         }
     }
+
     statistics() {
         let modale = document.body.querySelector(".modal");
         modale.classList.add("modalVisible");
         modale.append(this.createElementByTypeAndValue("DIV", "", "modalDialog"));
         modale.firstElementChild.append(this.createStatistics());
         modale.addEventListener("click", onClickContainer);
+
         function onClickContainer(event) {
             event.preventDefault();
             if (event.target.className === "modalDialog") {
@@ -222,13 +221,29 @@ class RenderHtml extends Bank {
     createStatistics() {
         let statistics = this.createElementByTypeAndValue("DIV", "", "statistics");
         statistics.append(this.createElementByTypeAndValue("DIV", "Oбщее количество денег внутри банка в долларовом эквиваленте:", "statisticsTitle"));
-        statistics.append(this.createElementByTypeAndValue("DIV", this.calcTotalMoney("USD"), "statisticsValue"));
+        let totalMoneyDiv = this.createElementByTypeAndValue("DIV", "Loading...", "statisticsValue");
+        statistics.append(totalMoneyDiv);
+        let totalMoney = this.calcTotalMoney("USD");
+        totalMoney.then(data => totalMoneyDiv.innerText = data);
         statistics.append(this.createElementByTypeAndValue("DIV", "Количество денег в долларовом эквиваленте все клиенты должны банку:", "statisticsTitle"));
-        statistics.append(this.createElementByTypeAndValue("DIV", this.calcOweMoneyClients("USD"), "statisticsValue"));
+        let moneyDebtDiv =  this.createElementByTypeAndValue("DIV", "Loading...", "statisticsValue");
+        statistics.append(moneyDebtDiv);
+        let moneyDebt = this.calcOweMoneyClients("USD");
+        moneyDebt.then(data => moneyDebtDiv.innerText = data);
         statistics.append(this.createElementByTypeAndValue("DIV", "Cколько неактивных клиентов должны погасить кредит банку и на какую общую сумму:", "statisticsTitle"));
-        statistics.append(this.createElementByTypeAndValue("DIV",  this.countDebtorsTotalDebt("USD", true), "statisticsValue"));
+        let countDebtorActiveDiv = this.createElementByTypeAndValue("DIV", "Loading...", "statisticsValue");
+        statistics.append(countDebtorActiveDiv);
+        let countDebtorActive = this.countDebtorsTotalDebt("USD", true);
+        countDebtorActive.then(data => {
+            return countDebtorActiveDiv.innerText = Object.keys(data)[0] + ": " + data[Object.keys(data)[0]]+"; " + Object.keys(data)[1] + ": " + data[Object.keys(data)[1]];
+        });
         statistics.append(this.createElementByTypeAndValue("DIV", "Cколько активных клиентов должны погасить кредит банку и на какую общую сумму:", "statisticsTitle"));
-        statistics.append(this.createElementByTypeAndValue("DIV",  this.countDebtorsTotalDebt("USD", false), "statisticsValue"));
+        let countDebtorDiv = this.createElementByTypeAndValue("DIV", "Loading...", "statisticsValue");
+        statistics.append(countDebtorDiv);
+        let countDebtor = this.countDebtorsTotalDebt("USD", false)
+        countDebtor.then(data => {
+            return countDebtorDiv.innerText = Object.keys(data)[0] + ": " + data[Object.keys(data)[0]]+"; " + Object.keys(data)[1] + ": " + data[Object.keys(data)[1]];
+        });
         return statistics;
     }
 
@@ -275,7 +290,8 @@ class RenderHtml extends Bank {
         if (!isEdit) {
             let div = document.createElement("DIV");
             div.className = "valueTitle";
-            div.innerText = data[value] || 0;
+            div.innerText = value || 0;
+            //div.innerText = data[value] || 0;
             return div;
         }
         let select = document.createElement('SELECT');
@@ -297,10 +313,32 @@ class RenderHtml extends Bank {
         }
         return select;
     }
- 
+    createAccount(account, isEdit){
+        let typeAccount = ["debit", "credit"];
+        //console.log("account", account);
+        let accountClient = this.createElementByTypeAndValue("DIV", "", "accountClient");
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Тип счета", "nameTitle"))
+        accountClient.append(this.createSelectByValueAndData(account.type, typeAccount, "selectClientStatus", isEdit));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Валюта", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("DIV", account.currency, "inputCurrency", isEdit));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Баланс", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("DIV", account.balance, "inputCurrency", isEdit));
+
+        if (account.creditLimit !== undefined) {
+            accountClient.append(this.createElementByTypeAndValue("DIV", "Кредитный лимит", "nameTitle"));
+            accountClient.append(this.createElementByTypeAndValue("DIV", account.creditLimit, "inputCurrency", isEdit));
+        }
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Статус счета", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("DIV", String(account.isActive), "inputCurrency", isEdit));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Дата регистрации", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("date", account["registrationDate"], "registrationDate", isEdit));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Дата регистрации", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("date", account["expirationDate"], "registrationDate", isEdit));
+
+        return accountClient;
+    }
     createCard(obj, isEdit) {
         const clientStatus =  ["Заблокирован", "Активный"];
-
         let card = this.createElementByTypeAndValue("DIV", "", 'card');
         card.id = obj.id;
         let cardTitle = this.createElementByTypeAndValue("H2", "Карточка клиента", "cardTitle");
@@ -312,12 +350,20 @@ class RenderHtml extends Bank {
         cardBody.append(this.createElementByTypeAndValue("DIV", "Фамилия", "nameTitle"));
         cardBody.append(this.createElementByTypeAndValue("DIV", obj["surname"], "inputSurname", isEdit));
         cardBody.append(this.createElementByTypeAndValue("DIV", "Статус клиента", "nameTitle"));
-        cardBody.append(this.createSelectByValueAndData(Number(obj.isActive), clientStatus, "selectClientStatus", isEdit));
+        cardBody.append(this.createSelectByValueAndData(String(obj.isActive), clientStatus, "selectClientStatus", isEdit));
         cardBody.append(this.createElementByTypeAndValue("DIV", "Дата регистрации", "nameTitle"));
         cardBody.append(this.createElementByTypeAndValue("date", obj["registrationDate"], "registrationDate", isEdit));
         cardBody.append(this.createElementByTypeAndValue("DIV", "Счета клиента", "nameTitle"));
-        let accountsClient = this.createElementByTypeAndValue("div", "", "accounts")
+        let accountsClient = this.createElementByTypeAndValue("div", "", "accounts");
         cardBody.append(accountsClient);
+        let accountLength = 0;
+        if (obj.accounts !== undefined) {
+            accountLength = obj.accounts.length;
+        }
+        for (let i = 0; i < accountLength; i++) {
+            accountsClient.append(this.createAccount(obj.accounts[i], isEdit));
+        }
+        
 
         /*cardBody.append(this.createSelectByValueAndData(obj.departmentNumber, this.departments, "selectDepartment", isEdit));
          cardBody.append(this.createElementByTypeAndValue("div", "Должность", "nameTitle"));
@@ -326,27 +372,27 @@ class RenderHtml extends Bank {
         cardBody.append(this.createElementByTypeAndValue("div", obj["salary"], "inputSalary", isEdit));
         cardBody.append(this.createElementByTypeAndValue("div", "Статус", "nameTitle"));
         cardBody.append(this.createSelectByValueAndData(Number(!obj.isFired), workStatus, "selectWorkStatus", isEdit));
-
+*/
         let button;
         if (obj.id === undefined) {
             button = this.createElementByTypeAndValue("button", "Создать", "button");
-            button.addEventListener("click", this.onClickCreate.bind(this));
+            //button.addEventListener("click", this.onClickCreate.bind(this));
         } else {
             if (isEdit) {
                 button = this.createElementByTypeAndValue("button", "Сохранить", "button");
-                button.addEventListener("click", this.onClickSave.bind(this));
+               // button.addEventListener("click", this.onClickSave.bind(this));
             } else {
                 button = this.createElementByTypeAndValue("button", "Изменить", "button");
-                button.addEventListener("click", this.onClickChange.bind(this));
+               // button.addEventListener("click", this.onClickChange.bind(this));
             }
         }
         cardBody.append(button);
         if (!isEdit) {
             let buttonDelete = this.createElementByTypeAndValue("button", "Удалить", "button");
             cardBody.append(buttonDelete);
-            buttonDelete.addEventListener("click", this.onClickDelete.bind(this));
+           // buttonDelete.addEventListener("click", this.onClickDelete.bind(this));
         }
-       */
+       
         return card;
     }
 }
@@ -450,20 +496,7 @@ let baseClients = [
     },
 ];
 
-
 document.addEventListener("DOMContentLoaded", function() {
     let render = new RenderHtml(baseClients, ".app");
     render.init();
 });
-
-// let bank = new Bank(baseClients);
-
-// let bankIb = bank.getCurrencyRates()
-
-// bankIb.then(data => {
-//     console.log(data.EUR)
-// })
-
-//console.log(typeof bank.countTotalMoney("EUR"));
-//console.log("rt", bank.countOweMoneyAllClients("USD"));
-
