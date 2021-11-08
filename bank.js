@@ -2,10 +2,12 @@
 class Bank {
     #clients;
     idClient;
+    currencyTypes;
 
     constructor (clients) {
         this.#clients = clients;
         this.idClient = clients.length;
+        this.currencyTypes = ["UAH", "USD", "EUR", "RUR"];
     }
 
     async getCurrencyRates() {
@@ -28,23 +30,24 @@ class Bank {
     get getClients() {
         return this.#clients;
     }
-    
+
     async calcTotalMoney(type) {
+
         let rates = await this.getCurrencyRates();
-        let totalMoney = {};        
+        let totalMoney = {"UAH": 0, [type.toUpperCase()]: 0,};        
 
         for (let i = 0; i < this.#clients.length; i++) {
 
             for (let j = 0; j < this.#clients[i].accounts.length; j++) {
                 let clientAccount = this.#clients[i].accounts[j];
 
-                if (totalMoney[clientAccount.currency] === undefined) {
-                    totalMoney[clientAccount.currency] = 0;
+                if (totalMoney[this.currencyTypes[clientAccount.currency]] === undefined) {
+                    totalMoney[this.currencyTypes[clientAccount.currency]] = 0;
                 }
                 if (clientAccount.creditLimit) {
-                    totalMoney[clientAccount.currency] += (clientAccount.balance - clientAccount.creditLimit);
+                    totalMoney[this.currencyTypes[clientAccount.currency]] += (clientAccount.balance - clientAccount.creditLimit);
                 } else {
-                    totalMoney[clientAccount.currency] += clientAccount.balance;
+                    totalMoney[this.currencyTypes[clientAccount.currency]] += clientAccount.balance;
                 }
             }
         }
@@ -60,12 +63,15 @@ class Bank {
         if(type.toUpperCase() === "UAH") {
             return totalMoney["UAH"];
         }
+        if (totalMoney[type.toUpperCase()] === undefined) {
+            totalMoney[type.toUpperCase()] = 0;
+        }
         return Math.floor((totalMoney["UAH"] / rates[type.toUpperCase()] + totalMoney[type.toUpperCase()]) * 100) / 100;
     }
 
     async calcOweMoneyClients(type, isActive) {
         let rates = await this.getCurrencyRates();
-        let totalMoney = {};
+        let totalMoney = {"UAH": 0, [type.toUpperCase()]: 0,};
 
         for (let i = 0; i < this.#clients.length; i++) {
 
@@ -73,14 +79,14 @@ class Bank {
                 let clientAccount = this.#clients[i].accounts[j];
 
                 if (clientAccount.creditLimit && (clientAccount.creditLimit > clientAccount.balance)) {
-                    if (totalMoney[clientAccount.currency] === undefined) {
-                        totalMoney[clientAccount.currency] = 0;
+                    if (totalMoney[this.currencyTypes[clientAccount.currency]] === undefined) {
+                        totalMoney[this.currencyTypes[clientAccount.currency]] = 0;
                     }
                     if (isActive === undefined) {
-                        totalMoney[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance); 
+                        totalMoney[this.currencyTypes[clientAccount.currency]] += (clientAccount.creditLimit - clientAccount.balance); 
                     }
                     if (this.#clients[i].isActive === isActive) {
-                        totalMoney[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance); 
+                        totalMoney[this.currencyTypes[clientAccount.currency]] += (clientAccount.creditLimit - clientAccount.balance); 
                     }
                 }
             }
@@ -100,7 +106,7 @@ class Bank {
 
     async countDebtorsTotalDebt(type, isActive){
         let rates = await this.getCurrencyRates();
-        let result = { debtor: 0,};
+        let result = { debtor: 0, [type.toUpperCase()]: 0, "UAH": 0,};
 
         for (let i = 0; i < this.#clients.length; i++) {
             if (this.#clients[i].isActive === isActive) {
@@ -108,12 +114,12 @@ class Bank {
                 for (let j = 0; j < this.#clients[i].accounts.length; j++) {
                     let clientAccount = this.#clients[i].accounts[j];
 
-                    if (result[clientAccount.currency] === undefined) {
-                            result[clientAccount.currency] = 0;
+                    if (result[this.currencyTypes[clientAccount.currency]] === undefined) {
+                            result[this.currencyTypes[clientAccount.currency]] = 0;
                     }
                     if (clientAccount.creditLimit && (clientAccount.creditLimit > clientAccount.balance)){
                         result.debtor++;
-                        result[clientAccount.currency] += (clientAccount.creditLimit - clientAccount.balance);
+                        result[this.currencyTypes[clientAccount.currency]] += (clientAccount.creditLimit - clientAccount.balance);
                     }
                 }
             }
@@ -139,10 +145,14 @@ class Bank {
 
 class RenderHtml extends Bank {
     #app;
+    #clients;
+    clientStatus;
 
     constructor(clients, selector) {
         super(clients);
+        this.#clients = this.getClients;
         this.#app = document.querySelector(selector);
+        this.clientStatus = ["Заблокирован", "Активный"];
         
         if(this.#app === null) {
             throw new Error("Selector not found");
@@ -153,9 +163,8 @@ class RenderHtml extends Bank {
         this.#app.append(this.createElementByTypeAndValue("DIV", "", "modal"));
         this.#app.append(this.createElementByTypeAndValue("DIV", "", "menu"));
         this.#app.append(this.createElementByTypeAndValue("DIV", "", "container"));
-        
         this.showMenu();
-        this.showCards(this.getClients);
+        this.showCards(this.#clients);
     }
 
     showCards(clients) {
@@ -169,6 +178,7 @@ class RenderHtml extends Bank {
 
     modale(obj) {
         let container = document.body.querySelector(".modal");
+        container.innerHTML = "";
         container.classList.add("modalVisible");
         container.append(this.createElementByTypeAndValue("DIV", "", "modalDialog"));
         container.firstElementChild.append(this.createCard(obj, true));
@@ -230,17 +240,17 @@ class RenderHtml extends Bank {
         statistics.append(moneyDebtDiv);
         let moneyDebt = this.calcOweMoneyClients("USD");
         moneyDebt.then(data => moneyDebtDiv.innerText = data);
-        statistics.append(this.createElementByTypeAndValue("DIV", "Cколько неактивных клиентов должны погасить кредит банку и на какую общую сумму:", "statisticsTitle"));
+        statistics.append(this.createElementByTypeAndValue("DIV", "Cколько активных клиентов должны погасить кредит банку и на какую общую сумму:", "statisticsTitle"));
         let countDebtorActiveDiv = this.createElementByTypeAndValue("DIV", "Loading...", "statisticsValue");
         statistics.append(countDebtorActiveDiv);
         let countDebtorActive = this.countDebtorsTotalDebt("USD", true);
         countDebtorActive.then(data => {
             return countDebtorActiveDiv.innerText = Object.keys(data)[0] + ": " + data[Object.keys(data)[0]]+"; " + Object.keys(data)[1] + ": " + data[Object.keys(data)[1]];
         });
-        statistics.append(this.createElementByTypeAndValue("DIV", "Cколько активных клиентов должны погасить кредит банку и на какую общую сумму:", "statisticsTitle"));
+        statistics.append(this.createElementByTypeAndValue("DIV", "Cколько неактивных клиентов должны погасить кредит банку и на какую общую сумму:", "statisticsTitle"));
         let countDebtorDiv = this.createElementByTypeAndValue("DIV", "Loading...", "statisticsValue");
         statistics.append(countDebtorDiv);
-        let countDebtor = this.countDebtorsTotalDebt("USD", false)
+        let countDebtor = this.countDebtorsTotalDebt("USD", false);
         countDebtor.then(data => {
             return countDebtorDiv.innerText = Object.keys(data)[0] + ": " + data[Object.keys(data)[0]]+"; " + Object.keys(data)[1] + ": " + data[Object.keys(data)[1]];
         });
@@ -271,7 +281,7 @@ class RenderHtml extends Bank {
                 }
             }
         } else {
-            div = document.createElement(type);
+            div = document.createElement("DIV");
             div.className = "valueTitle";
             if (value === 0) {
                 div.innerText = value;
@@ -290,8 +300,7 @@ class RenderHtml extends Bank {
         if (!isEdit) {
             let div = document.createElement("DIV");
             div.className = "valueTitle";
-            div.innerText = value || 0;
-            //div.innerText = data[value] || 0;
+            div.innerText = data[value] || 0;
             return div;
         }
         let select = document.createElement('SELECT');
@@ -313,88 +322,207 @@ class RenderHtml extends Bank {
         }
         return select;
     }
-    createAccount(account, isEdit){
-        let typeAccount = ["debit", "credit"];
-        //console.log("account", account);
-        let accountClient = this.createElementByTypeAndValue("DIV", "", "accountClient");
-        accountClient.append(this.createElementByTypeAndValue("DIV", "Тип счета", "nameTitle"))
-        accountClient.append(this.createSelectByValueAndData(account.type, typeAccount, "selectClientStatus", isEdit));
-        accountClient.append(this.createElementByTypeAndValue("DIV", "Валюта", "nameTitle"));
-        accountClient.append(this.createElementByTypeAndValue("DIV", account.currency, "inputCurrency", isEdit));
-        accountClient.append(this.createElementByTypeAndValue("DIV", "Баланс", "nameTitle"));
-        accountClient.append(this.createElementByTypeAndValue("DIV", account.balance, "inputCurrency", isEdit));
 
+    createAccountHtml(account, isEdit){
+        let typeAccount = ["debit", "credit"];
+        let accountClient = this.createElementByTypeAndValue("DIV", "", "accountClient");
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Тип счета", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("DIV", typeAccount[account.type], "valueTitle"));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Дата регистрации", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("date", account["registrationDate"], "registrationDate", isEdit));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Дата окончания", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("date", account["expirationDate"], "expirationDate", isEdit));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Валюта", "nameTitle"));
+        accountClient.append(this.createSelectByValueAndData(account.currency, this.currencyTypes, "selectCurrency", isEdit));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Статус счета", "nameTitle"));
+        accountClient.append(this.createSelectByValueAndData(Number(account.isActive), this.clientStatus, "selectStatus", isEdit));
+        accountClient.append(this.createElementByTypeAndValue("DIV", "Баланс", "nameTitle"));
+        accountClient.append(this.createElementByTypeAndValue("DIV", account.balance, "inputBalance", isEdit));
         if (account.creditLimit !== undefined) {
             accountClient.append(this.createElementByTypeAndValue("DIV", "Кредитный лимит", "nameTitle"));
             accountClient.append(this.createElementByTypeAndValue("DIV", account.creditLimit, "inputCurrency", isEdit));
         }
-        accountClient.append(this.createElementByTypeAndValue("DIV", "Статус счета", "nameTitle"));
-        accountClient.append(this.createElementByTypeAndValue("DIV", String(account.isActive), "inputCurrency", isEdit));
-        accountClient.append(this.createElementByTypeAndValue("DIV", "Дата регистрации", "nameTitle"));
-        accountClient.append(this.createElementByTypeAndValue("date", account["registrationDate"], "registrationDate", isEdit));
-        accountClient.append(this.createElementByTypeAndValue("DIV", "Дата регистрации", "nameTitle"));
-        accountClient.append(this.createElementByTypeAndValue("date", account["expirationDate"], "registrationDate", isEdit));
-
+        if (isEdit) {
+            let button = this.createElementByTypeAndValue("button", "Удалить счет", "button");
+            button.typeAction = "remove";
+            button.addEventListener("click", this.onClickAccount.bind(this));
+            accountClient.append(button);
+        }
         return accountClient;
     }
+
     createCard(obj, isEdit) {
-        const clientStatus =  ["Заблокирован", "Активный"];
+        
         let card = this.createElementByTypeAndValue("DIV", "", 'card');
-        card.id = obj.id;
         let cardTitle = this.createElementByTypeAndValue("H2", "Карточка клиента", "cardTitle");
         card.append(cardTitle);
         let cardBody = this.createElementByTypeAndValue("DIV", "", "cardBody");
         card.append(cardBody);
-        cardBody.append(this.createElementByTypeAndValue("DIV", "Имя", "nameTitle"));
-        cardBody.append(this.createElementByTypeAndValue("DIV", obj["name"], "inputName", isEdit));
-        cardBody.append(this.createElementByTypeAndValue("DIV", "Фамилия", "nameTitle"));
-        cardBody.append(this.createElementByTypeAndValue("DIV", obj["surname"], "inputSurname", isEdit));
-        cardBody.append(this.createElementByTypeAndValue("DIV", "Статус клиента", "nameTitle"));
-        cardBody.append(this.createSelectByValueAndData(String(obj.isActive), clientStatus, "selectClientStatus", isEdit));
-        cardBody.append(this.createElementByTypeAndValue("DIV", "Дата регистрации", "nameTitle"));
-        cardBody.append(this.createElementByTypeAndValue("date", obj["registrationDate"], "registrationDate", isEdit));
-        cardBody.append(this.createElementByTypeAndValue("DIV", "Счета клиента", "nameTitle"));
-        let accountsClient = this.createElementByTypeAndValue("div", "", "accounts");
-        cardBody.append(accountsClient);
+        let infoClient = this.createElementByTypeAndValue("DIV", "", "infoClient");
+        infoClient.id = obj.id;
+        cardBody.append(infoClient);
+        infoClient.append(this.createElementByTypeAndValue("DIV", "Имя", "nameTitle"));
+        infoClient.append(this.createElementByTypeAndValue("DIV", obj["name"], "inputName", isEdit));
+        infoClient.append(this.createElementByTypeAndValue("DIV", "Фамилия", "nameTitle"));
+        infoClient.append(this.createElementByTypeAndValue("DIV", obj["surname"], "inputSurname", isEdit));
+        infoClient.append(this.createElementByTypeAndValue("DIV", "Статус клиента", "nameTitle"));
+        infoClient.append(this.createSelectByValueAndData(Number(obj.isActive), this.clientStatus, "selectClientStatus", isEdit));
+        infoClient.append(this.createElementByTypeAndValue("DIV", "Дата регистрации", "nameTitle"));
+        infoClient.append(this.createElementByTypeAndValue("date", obj["registrationDate"], "registrationDate", isEdit));
         let accountLength = 0;
         if (obj.accounts !== undefined) {
             accountLength = obj.accounts.length;
         }
         for (let i = 0; i < accountLength; i++) {
-            accountsClient.append(this.createAccount(obj.accounts[i], isEdit));
+            let account = this.createAccountHtml(obj.accounts[i], isEdit);
+            account.id = i;
+            cardBody.append(account);
         }
-        
 
-        /*cardBody.append(this.createSelectByValueAndData(obj.departmentNumber, this.departments, "selectDepartment", isEdit));
-         cardBody.append(this.createElementByTypeAndValue("div", "Должность", "nameTitle"));
-        cardBody.append(this.createSelectByValueAndData(obj.position, this.positions, "selectPosition", isEdit)); 
-        cardBody.append(this.createElementByTypeAndValue("div", "Зарплата", "nameTitle"));
-        cardBody.append(this.createElementByTypeAndValue("div", obj["salary"], "inputSalary", isEdit));
-        cardBody.append(this.createElementByTypeAndValue("div", "Статус", "nameTitle"));
-        cardBody.append(this.createSelectByValueAndData(Number(!obj.isFired), workStatus, "selectWorkStatus", isEdit));
-*/
         let button;
+        let buttonNewAccount;
         if (obj.id === undefined) {
             button = this.createElementByTypeAndValue("button", "Создать", "button");
-            //button.addEventListener("click", this.onClickCreate.bind(this));
+            button.addEventListener("click", this.onClickCreate.bind(this));
         } else {
             if (isEdit) {
                 button = this.createElementByTypeAndValue("button", "Сохранить", "button");
-               // button.addEventListener("click", this.onClickSave.bind(this));
+                buttonNewAccount = this.createElementByTypeAndValue("button", "Добавить счет", "button");
+                buttonNewAccount.typeAction = "new";
+                buttonNewAccount.addEventListener("click", this.onClickAccount.bind(this));
+                infoClient.append(buttonNewAccount);
+                button.addEventListener("click", this.onClickSave.bind(this));
             } else {
                 button = this.createElementByTypeAndValue("button", "Изменить", "button");
-               // button.addEventListener("click", this.onClickChange.bind(this));
+                button.addEventListener("click", this.onClickChange.bind(this));
             }
         }
-        cardBody.append(button);
+        infoClient.append(button);
         if (!isEdit) {
             let buttonDelete = this.createElementByTypeAndValue("button", "Удалить", "button");
-            cardBody.append(buttonDelete);
-           // buttonDelete.addEventListener("click", this.onClickDelete.bind(this));
+            infoClient.append(buttonDelete);
+            buttonDelete.addEventListener("click", this.onClickDelete.bind(this));
         }
        
         return card;
     }
+
+    onClickSave(event) {
+        event.preventDefault();
+        let id;
+        let container = document.body.querySelector(".modal");
+        let card = container.querySelector(".infoClient");
+    
+        for (let i = 0; i < this.#clients.length; i++) {
+            if (this.#clients[i].id === Number(card.id)) {
+                id = i;
+                break;
+            }
+        }
+        this.#clients[id].name = card.querySelector(".inputName").value;
+        this.#clients[id].surname = card.querySelector(".inputSurname").value;
+        this.#clients[id].isActive = Boolean(card.querySelector(".selectClientStatus").options.selectedIndex);
+        this.#clients[id].registrationDate = card.querySelector(".registrationDate").value;
+        let accountsDom = container.querySelectorAll(".accountClient");
+        for (let i = 0; i < accountsDom.length; i++) {
+            this.#clients[id].accounts[i].registrationDate = accountsDom[i].querySelector(".registrationDate").value;
+            this.#clients[id].accounts[i].expirationDate = accountsDom[i].querySelector(".expirationDate").value;
+            this.#clients[id].accounts[i].currency = accountsDom[i].querySelector(".selectCurrency").options.selectedIndex;
+            let accountStatus = accountsDom[i].querySelector(".selectStatus").options.selectedIndex;
+            this.#clients[id].accounts[i].isActive = Boolean(accountStatus);
+            this.#clients[id].accounts[i].balance = Number(accountsDom[i].querySelector(".inputBalance").value);
+            let accountCreditLimit;
+        }
+
+/*type: 1,
+            currency: 0,
+            balance: 100,
+            creditLimit: 300,
+            isActive: true,
+            registrationDate: "2020-02-01",
+            expirationDate: "2024-02-01", */
+
+        console.log();
+        container.classList.remove("modalVisible");
+        container.innerHTML = "";
+        this.showCards(this.#clients);
+    }
+
+    onClickAccount(event) {
+        let container = document.body.querySelector(".modal");
+        let idAccount = Number(event.target.parentElement.id);
+        let idCard = Number(container.querySelector(".infoClient").id);
+        for (let i = 0; i < this.#clients.length; i++) {
+            if (this.#clients[i].id === idCard) {
+                if(event.target.typeAction === "new") {
+                    let newAccount = {
+                        type: 1,
+                        currency: 0,
+                        balance: 0,
+                        creditLimit: 0,
+                        isActive: true,
+                        registrationDate: 0,
+                        expirationDate: 0,
+                    };
+                    this.#clients[i].accounts.push(newAccount);
+                } else {
+                    this.#clients[i].accounts.splice(idAccount, 1);
+                }
+                this.modale(this.#clients[i]);
+                break;
+            }
+        }
+    }
+
+    onClickCreate(event) {
+        event.preventDefault();
+        let container = document.body.querySelector(".modal");
+        let infoClient = container.querySelector(".infoClient");
+        let inValid = true;
+        let newClient = {};
+        newClient.name = infoClient.querySelector(".inputName").value;
+        newClient.surname = infoClient.querySelector(".inputSurname").value;
+        newClient.isActive = Boolean(infoClient.querySelector(".selectClientStatus").options.selectedIndex);
+        newClient.registrationDate = infoClient.querySelector(".registrationDate").value;
+        console.log(newClient);
+        
+        for (let prop in newClient) {
+            if (newClient[prop] === '') {
+                    inValid = false;
+            }
+        }
+        if (inValid && newClient.isActive) {
+            newClient.id = ++this.idClient;
+            this.#clients.push(newClient);
+            container.classList.remove("modalVisible");
+            container.innerHTML = "";
+            this.showCards(this.#clients);
+        }
+    }
+
+    onClickChange(event) {
+        event.preventDefault();
+        let id = Number(event.target.parentElement.id);
+        for (let i = 0; i < this.#clients.length; i++) {
+            if (this.#clients[i].id === id) {
+                this.modale(this.#clients[i]);
+                break;
+            }
+        }
+    }
+
+    onClickDelete(event) {
+        event.preventDefault();
+        let id = Number(event.target.parentElement.id);
+        for (let i = 0; i < this.#clients.length; i++) {
+            if (this.#clients[i].id === id) {
+                this.#clients.splice(i, 1);
+                break;
+            }
+        }
+        this.showCards(this.getClients);
+    }
+
 }
 
 let baseClients = [
@@ -403,18 +531,18 @@ let baseClients = [
         name: "John",
         surname: "Conor",
         isActive: true,
-        registrationDate: "2014-02-01",
+        registrationDate: "2013-02-01",
         accounts: [{
-            type: "debit",
-            currency: "USD",
+            type: 0,
+            currency: 1,
             balance: 500,
             isActive: true,
             registrationDate: "2019-02-01",
             expirationDate: "2023-02-01",
         },
         {
-            type: "credit",
-            currency: "UAH",
+            type: 1,
+            currency: 0,
             balance: 100,
             creditLimit: 300,
             isActive: true,
@@ -429,16 +557,16 @@ let baseClients = [
         isActive: true,
         registrationDate: "2014-02-01",
         accounts: [{
-            type: "debit",
-            currency: "UAH",
+            type: 0,
+            currency: 0,
             balance: 1200,
             isActive: true,
             registrationDate: "2019-02-01",
             expirationDate: "2022-02-01",
         },
         {
-            type: "credit",
-            currency: "USD",
+            type: 1,
+            currency: 1,
             balance: 200,
             creditLimit: 300,
             isActive: true,
@@ -451,18 +579,18 @@ let baseClients = [
         name: "Eva",
         surname: "Onor",
         isActive: false,
-        registrationDate: "2014-02-01",
+        registrationDate: "2015-02-01",
         accounts: [{
-            type: "debit",
-            currency: "EUR",
+            type: 0,
+            currency: 2,
             balance: 1200,
             isActive: true,
             registrationDate: "2019-02-01",
             expirationDate: "2024-02-12",
         },
         {
-            type: "credit",
-            currency: "USD",
+            type: 1,
+            currency: 1,
             balance: 100,
             creditLimit: 300,
             isActive: true,
@@ -475,18 +603,18 @@ let baseClients = [
         name: "William",
         surname: "Onor",
         isActive: true,
-        registrationDate: "2014-02-01",
+        registrationDate: "2016-02-01",
         accounts: [{
-            type: "debit",
-            currency: "USD",
+            type: 0,
+            currency: 1,
             balance: 750,
             isActive: true,
             registrationDate: "2019-02-01",
             expirationDate: "2025-02-01",
         },
         {
-            type: "credit",
-            currency: "EUR",
+            type: 1,
+            currency: 2,
             balance: 100,
             creditLimit: 300,
             isActive: true,

@@ -37,21 +37,13 @@
         justify-content: start;        
     }
     .card {
-        width: 215px;
+        /* width: 305px; */
         margin: 10px;
         border: 1px solid #2e491793;
         border-radius: 4px;
         color: #3c763d;
         background-color: #dff0d8;
     }
-    .accounts {
-        padding: 5px;
-        background-color: #73866c23; 
-    }
-    .accountClient {
-        border-top: 1px solid #2e441b67;
-    }
-    
     .cardTitle {
         margin: 0;
         font-size: 20px;
@@ -61,9 +53,28 @@
         background-color: #73866c23;
     }
     .cardBody {
+        display: flex;
+        padding: 0 10px 10px;
         text-align: center;
-        padding: 0px 10px 10px;
+        
     }
+    .infoClient {
+         padding-right: 0px;
+    }
+    .accounts {
+        padding-left: 5px;
+        
+    }
+    .accountClient {
+        padding: 0px 10px 10px;
+        background-color: #73866c10; 
+        /* border-top: 1px solid #2e441b67; */
+    }
+    .accountClient:first-child {
+        margin-left: 10px;
+        border-top: 1px solid #2e441b67;
+    }
+   
     .nameTitle {
         text-align: left;
         padding: 10px 5px 5px 2px;
