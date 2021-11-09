@@ -128,7 +128,6 @@ class Bank {
             
             if (elem !== type.toUpperCase()) {
                 if (elem !== "UAH" && elem !== "debtor") {
-
                     if (result["UAH"] === undefined) {
                         result["UAH"] = 0;
                     }
@@ -340,7 +339,7 @@ class RenderHtml extends Bank {
         accountClient.append(this.createElementByTypeAndValue("DIV", account.balance, "inputBalance", isEdit));
         if (account.creditLimit !== undefined) {
             accountClient.append(this.createElementByTypeAndValue("DIV", "Кредитный лимит", "nameTitle"));
-            accountClient.append(this.createElementByTypeAndValue("DIV", account.creditLimit, "inputCurrency", isEdit));
+            accountClient.append(this.createElementByTypeAndValue("DIV", account.creditLimit, "inputLimit", isEdit));
         }
         if (isEdit) {
             let button = this.createElementByTypeAndValue("button", "Удалить счет", "button");
@@ -403,7 +402,6 @@ class RenderHtml extends Bank {
             infoClient.append(buttonDelete);
             buttonDelete.addEventListener("click", this.onClickDelete.bind(this));
         }
-       
         return card;
     }
 
@@ -424,6 +422,7 @@ class RenderHtml extends Bank {
         this.#clients[id].isActive = Boolean(card.querySelector(".selectClientStatus").options.selectedIndex);
         this.#clients[id].registrationDate = card.querySelector(".registrationDate").value;
         let accountsDom = container.querySelectorAll(".accountClient");
+
         for (let i = 0; i < accountsDom.length; i++) {
             this.#clients[id].accounts[i].registrationDate = accountsDom[i].querySelector(".registrationDate").value;
             this.#clients[id].accounts[i].expirationDate = accountsDom[i].querySelector(".expirationDate").value;
@@ -432,17 +431,19 @@ class RenderHtml extends Bank {
             this.#clients[id].accounts[i].isActive = Boolean(accountStatus);
             this.#clients[id].accounts[i].balance = Number(accountsDom[i].querySelector(".inputBalance").value);
             let accountCreditLimit;
+            if (accountsDom[i].querySelector(".inputLimit") !== null) {
+                accountCreditLimit = accountsDom[i].querySelector(".inputLimit").value;
+                 if (accountCreditLimit === "0" || accountCreditLimit === ""){
+                    this.#clients[id].accounts[i].type = 0;
+                    delete this.#clients[id].accounts[i].creditLimit;
+                } else {
+                    this.#clients[id].accounts[i].type = 1;
+                    this.#clients[id].accounts[i].creditLimit = Number(accountCreditLimit);
+                }
+            } else {
+                this.#clients[id].accounts[i].type = 0;
+            }
         }
-
-/*type: 1,
-            currency: 0,
-            balance: 100,
-            creditLimit: 300,
-            isActive: true,
-            registrationDate: "2020-02-01",
-            expirationDate: "2024-02-01", */
-
-        console.log();
         container.classList.remove("modalVisible");
         container.innerHTML = "";
         this.showCards(this.#clients);
@@ -484,8 +485,6 @@ class RenderHtml extends Bank {
         newClient.surname = infoClient.querySelector(".inputSurname").value;
         newClient.isActive = Boolean(infoClient.querySelector(".selectClientStatus").options.selectedIndex);
         newClient.registrationDate = infoClient.querySelector(".registrationDate").value;
-        console.log(newClient);
-        
         for (let prop in newClient) {
             if (newClient[prop] === '') {
                     inValid = false;
