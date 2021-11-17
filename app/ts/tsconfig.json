@@ -1,0 +1,7 @@
+{
+  "files": ["bank.ts"],
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "target": "ES2020"
+  }
+}

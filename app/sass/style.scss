@@ -1,0 +1,147 @@
+.modal {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 400ms ease-in;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+}
+.modalVisible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.modalDialog {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: auto;
+    margin: 10px;
+}
+.menu {
+    padding: 15px;
+}
+.menu button {
+    margin: 5px;
+}
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: start;        
+}
+.card {
+    /* width: 305px; */
+    margin: 10px;
+    border: 1px solid #2e491793;
+    border-radius: 4px;
+    color: #3c763d;
+    background-color: #dff0d8;
+}
+.cardTitle {
+    margin: 0;
+    font-size: 20px;
+    padding: 10px;
+    border-radius: 4px 4px 0 0;
+    color: #203b21;
+    background-color: #73866c23;
+}
+.cardBody {
+    display: flex;
+    padding: 0 10px 10px;
+    text-align: center;
+    
+}
+.infoClient {
+     padding-right: 0px;
+}
+.accounts {
+    padding-left: 5px;
+    
+}
+.accountClient {
+    padding: 0px 10px 10px;
+    background-color: #73866c10; 
+    /* border-top: 1px solid #2e441b67; */
+}
+.accountClient:first-child {
+    margin-left: 10px;
+    border-top: 1px solid #2e441b67;
+}
+
+.nameTitle {
+    text-align: left;
+    padding: 10px 5px 5px 2px;
+}
+.valueTitle {
+    text-align: left;
+    color:#191b19;
+    
+}
+.statistics {
+    margin: 10px;
+    padding: 15px;
+    border: 1px solid #2e491793;
+    border-radius: 4px;
+    color: #1d251d;
+    background-color: #dff0d8;
+}
+.statisticsTitle {
+    margin-top: 20px;
+    margin-bottom: 5px;
+}
+.statisticsValue {
+    color:#030303;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 400ms ease-in;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+}
+.modalVisible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.modalDialog {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: auto;
+    margin: 10px;
+}
+input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+input:invalid {
+    border: 1px solid red;
+}
+select {
+    width: 100%;
+}
+select:invalid {
+    border: 1px solid red;
+}
+button {
+    cursor: pointer;
+    margin: 20px 5px 0px;
+}
