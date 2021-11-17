@@ -30,17 +30,17 @@ function browsersync() {
 }
 
 function scripts() {
-    return src(['app/js/*.js',])
+    return src(['app/**/*.js',])
     .pipe(concat('bank.min.js'))
     .pipe(uglify())
-    .pipe(dest('app/min.js/'))
+    .pipe(dest('app/js/'))
     .pipe(browserSync.stream());
 }
 
 function compileTs() {
     return tsProject.src()
     .pipe(ts(tsProject))
-    .pipe(dest('app/js/'))
+    .pipe(dest('app/ts/'))
     .pipe(browserSync.stream());
 }
 
