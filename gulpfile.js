@@ -18,7 +18,7 @@ function styles() {
     .pipe(autoprefixer({ overrideBrowserslist: ['last 10 versions'], grid: true }))
     .pipe(cleancss( { level: { 1: { specialComments: 0 } } } ))
     .pipe(dest('app/css/'))
-    .pipe(browserSync.stream())
+    .pipe(browserSync.stream());
 }
 
 function browsersync() {
@@ -57,11 +57,11 @@ function buildcopy() {
         'app/js/**/*.min.js',
         'app/**/*.html',
         ], { base: 'app' })
-    .pipe(dest('dist'))
+    .pipe(dest('dist'));
 }
 
 function cleandist() {
-    return del('dist/**/*', { force: true })
+    return del('dist/**/*', { force: true });
 }
 
 exports.browsersync = browsersync;
